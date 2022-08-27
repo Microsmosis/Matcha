@@ -1,0 +1,368 @@
+body {
+  background-image: linear-gradient(
+    to top,
+    #d5d4d0 0%,
+    #d5d4d0 1%,
+    #eeeeec 31%,
+    #efeeec 75%,
+    #e9e9e7 100%
+  );
+  background-attachment: fixed;
+}
+
+.App {
+  height: 100vh;
+}
+
+.landing-page {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  height: 100vh;
+}
+
+.landing-page-content {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 10vw;
+}
+
+.image-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  border-radius: 10px;
+  background-color: white;
+  width: 15vw;
+  min-width: 150px;
+  box-shadow: 3px 3px white, 8px 8px black;
+}
+
+.image-div {
+  overflow: hidden;
+  border-radius: 10px;
+  width: 100%;
+}
+
+.mobile-Img {
+  animation: fadeIn 3s;
+  width: 100%;
+}
+
+@keyframes fadeIn {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+.center-items {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+  width: 20vw;
+  min-width: 150px;
+}
+
+.logo-div {
+  margin-top: -10vh;
+  width: 20vw;
+  min-width: 120px;
+}
+
+.logo-Img {
+  width: 100%;
+}
+
+.logo-center {
+  font-size: calc(10px + 6vw);
+}
+
+.landing-signup-Button {
+  background-color: transparent;
+  color: #1b1c1e;
+  border: #1b1c1e solid 1px;
+}
+
+.signup-container {
+  width: 40vw;
+  min-height: 45vh;
+  padding: 30px;
+  border-radius: 10px;
+  box-shadow: 1.8px 3.5px 3.5px hsl(0deg 0% 0% / 0.45);
+}
+
+.form-logo {
+  width: 10vw;
+  min-width: 80px;
+  margin: 0 auto;
+}
+
+.form-logo-img {
+  width: 100%;
+}
+
+@media only screen and (max-width: 450px) {
+  .signup-container {
+    width: fit-content;
+    box-shadow: none;
+  }
+  .form-button {
+    width: 100%;
+  }
+}
+
+@media only screen and (max-width: 1280px) and (min-width: 451px) {
+  .signup-container {
+    width: fit-content;
+    box-shadow: none;
+  }
+  .form-button {
+    width: 100%;
+  }
+}
+
+.main-footer {
+  position: sticky;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  width: 100%;
+  left: 0;
+  height: auto;
+  top: 100%;
+  bottom: 0;
+  background-color: #1b1c1e;
+  color: white;
+}
+
+.info-footer {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+}
+
+.rights-text {
+  margin-left: auto;
+  margin-right: 10px;
+}
+
+.terms-logo-container {
+  width: 10vw;
+  min-width: 100px;
+}
+
+.terms-logo-container > img {
+  width: 100%;
+}
+
+.footer-links {
+  display: flex;
+  flex-direction: row;
+}
+
+.terms-link {
+  text-decoration: none;
+  color: white;
+}
+
+.footer-text {
+  font-size: calc(5px + 0.6vw);
+}
+
+.team-img-container {
+  width: 15vw;
+  min-width: 120px;
+  max-height: 25vh;
+  border: rgb(165, 165, 253) 1px solid;
+  box-shadow: 50px 30px rgb(165, 165, 253);
+  overflow: hidden;
+}
+
+.team-img-container > img {
+  width: 100%;
+}
+
+.team-row {
+  display: flex;
+  justify-content: center;
+}
+
+.team-col {
+  margin: 0 10vw;
+}
+
+.loading-container {
+  height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.center-loading-logo {
+  width: 20vw;
+  min-width: 300px;
+  animation: loadingAnim 2s ease 0s infinite normal forwards;
+}
+
+.center-loading-logo > img {
+  width: 100%;
+}
+
+.uploading-container {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  min-height: 80vh;
+}
+
+.images-wrapper {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.pictures-form-btn {
+  margin-top: auto;
+}
+
+.card-img-top {
+  width: 100%;
+  height: 28vh;
+  object-fit: cover;
+}
+
+.card-img-profile {
+  width: 100%;
+  min-height: 460px;
+  max-height: 40vh;
+  object-fit: cover;
+}
+
+.location-alert {
+  font-size: calc(5px + 1vw);
+}
+
+.username-alert {
+  font-size: calc(5px + 1vw);
+}
+
+/* @-webkit-keyframes fadeOut {
+  0% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes fadeOut {
+  0% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+} */
+
+.location-alert {
+  /* -webkit-animation-fill-mode: both;
+  animation-fill-mode: both;
+  -webkit-animation-duration: 5s;
+  animation-duration: 5s; */
+  /* -webkit-animation-name: fadeOut; */
+  /* animation-name: fadeOut; */
+  font-size: calc(5px + 0.7vw);
+}
+
+.users-cards-wrapper {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+}
+
+.users-cards-btn {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+}
+
+.settings-container {
+  border-radius: 10px;
+  box-shadow: 1.8px 3.5px 3.5px hsl(0deg 0% 0% / 0.45);
+}
+
+.cards-body {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  width: 39vw;
+}
+
+.cards-icons {
+  width: 1.3vw;
+}
+
+.cards-tags {
+  border-radius: 20px;
+  padding: 15px;
+  margin-right: 10px;
+  background-color: #f2f4f6;
+}
+
+.cards-buttons {
+  display: flex;
+  justify-content: center;
+  gap: 3vw;
+}
+
+.carousel-cards {
+  max-width: 27vw;
+}
+
+.action-btns > img {
+  transition: transform 0.2s ease;
+}
+
+.action-btns:active > img {
+  transform: scale(1.5);
+}
+
+#button-tooltip {
+  position: absolute;
+}
+
+@media only screen and (max-width: 450px) {
+  .team-img-container {
+    box-shadow: 20px 17px rgb(165, 165, 253);
+  }
+  .carousel-cards {
+    max-width: 100vw;
+  }
+  .cards-body {
+    width: 98vw;
+  }
+  .cards-buttons {
+    width: 100%;
+    margin: 10vh 0;
+  }
+}
+
+@keyframes loadingAnim {
+  0%,
+  50%,
+  100% {
+    opacity: 1;
+  }
+
+  25%,
+  75% {
+    opacity: 0;
+  }
+}
