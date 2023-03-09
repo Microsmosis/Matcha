@@ -15,8 +15,9 @@ const useImage = (defaultValue) => {
     setValue(imageList);
   };
   const dataURLKey = "data_url";
-  const acceptType = ["jpg", "png"];
-  const maxFileSize = 5242880;
+  const acceptType = ["jpg", "png", "jpeg"];
+  // 3mb limit
+  const maxFileSize = 3000000;
   return {
     value,
     maxNumber,

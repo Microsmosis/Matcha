@@ -5,22 +5,26 @@ import heartInline from "../../media/heart-inline.png";
 import { useState, useEffect } from "react";
 import { useDispatch } from "react-redux";
 import { disLikeUser, likeUser } from "../../reducers/usersReducer";
-import { sendNotificationService } from "../../services/notificationServices";
 
-const LikeButton = ({ loggedUserId, user, fameRate, setFameRate, loggedUsername }) => {
+const LikeButton = ({
+  loggedUserId,
+  user,
+  fameRate,
+  setFameRate,
+  loggedUsername,
+}) => {
   const [heart, setHeart] = useState(heartOutline);
   const [liked, setLiked] = useState(false);
   const dispatch = useDispatch();
 
-  const likePerson = () => {
+  const likePerson = async () => {
     if (liked) {
-      dispatch(disLikeUser(user.user_id, loggedUserId));
+      dispatch(disLikeUser(user.user_id, loggedUserId, loggedUsername));
       setHeart(heartOutline);
       setFameRate(fameRate - 1);
       setLiked(false);
     } else {
-      dispatch(likeUser(user.user_id, loggedUserId));
-	  sendNotificationService(user.email, loggedUsername, 1);
+      dispatch(likeUser(user.user_id, loggedUserId, loggedUsername, user.username));
       setHeart(heartInline);
       setFameRate(fameRate + 1);
       setLiked(true);
@@ -32,10 +36,13 @@ const LikeButton = ({ loggedUserId, user, fameRate, setFameRate, loggedUsername 
       if (user.liked_by.includes(loggedUserId)) {
         setHeart(heartInline);
         setLiked(true);
+      } else {
+        setHeart(heartOutline);
+        setLiked(false);
       }
       setFameRate(user.liked_by.length);
     }
-  }, [user, loggedUserId]);
+  }, [user, loggedUserId, user.liked_by, setFameRate]);
 
   return (
     <>

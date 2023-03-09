@@ -1,16 +1,18 @@
 import { useState } from "react";
 import { Button, Offcanvas, Form, Spinner, Container } from "react-bootstrap";
 import { useStoreUser, useStoreUsers } from "../../utils/getStoreStates";
+
 import LocationSearch from "./advanceSearchComponents/LocationSearch";
 import TagsInput from "../userInfoForms/TagsInput";
 import InputRange from "react-input-range";
+import { usersFetchSuccess } from "../../reducers/usersReducer";
+import { useDispatch } from "react-redux";
 
-const AdvanceSearch = ({ setUsers }) => {
-  const [show, setShow] = useState(false);
+const AdvanceSearch = ({ originalUsers, show, setShow }) => {
   const handleClose = () => setShow(false);
-  const handleShow = () => setShow(true);
   const { user } = useStoreUser();
   const usersInStore = useStoreUsers();
+  const dispatch = useDispatch();
 
   const [tags, setTags] = useState([]);
   const [ranges, setRanges] = useState({
@@ -23,10 +25,6 @@ const AdvanceSearch = ({ setUsers }) => {
       max: 60,
     },
   });
-
-  if (!user || !usersInStore) {
-    return <Spinner />;
-  }
 
   const handleSearch = () => {
     let filteredUsers = usersInStore.users;
@@ -53,13 +51,12 @@ const AdvanceSearch = ({ setUsers }) => {
         });
       }
     }
-
-    setUsers(filteredUsers);
+    dispatch(usersFetchSuccess(filteredUsers));
   };
 
   const handleReset = () => {
     setTags([]);
-    setUsers(usersInStore.users);
+    dispatch(usersFetchSuccess(originalUsers));
     const defaultRanges = {
       ageValues: {
         min: 21,
@@ -73,15 +70,19 @@ const AdvanceSearch = ({ setUsers }) => {
     setRanges(defaultRanges);
   };
 
+  if (!user || !usersInStore) {
+    return <Spinner />;
+  } else {
+  }
   return (
     <>
-      <Button onClick={handleShow}>Advanced search</Button>
+      
       <Offcanvas show={show} onHide={handleClose} placement="end">
-        <div className="mb-3 bg-light border-bottom">
+        <Container className="mb-3 bg-light border-bottom px-0">
           <Offcanvas.Header closeButton={"light"}>
             <Offcanvas.Title>Advanced Search</Offcanvas.Title>
           </Offcanvas.Header>
-        </div>
+        </Container>
         <Offcanvas.Body>
           <LocationSearch user={user} />
           <hr />

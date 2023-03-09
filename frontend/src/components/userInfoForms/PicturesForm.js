@@ -1,15 +1,22 @@
 import ImageUploading from "react-images-uploading";
-import { Button, Card } from "react-bootstrap";
+import { Button, Card, Spinner } from "react-bootstrap";
 import { Container } from "react-bootstrap";
 import useImage from "../../utils/useImage";
 import {
   pictureFormService,
   InfoFilledTokenService,
 } from "../../services/userServices";
+import { useState } from "react";
+import ScrollTop from "../../utils/scrollTop";
 
 const UserImageCard = ({ index, src, onImageUpdate, onImageRemove }) => {
+  ScrollTop("picturesForm");
   return (
-    <Card style={{ width: "18rem", minWidth: "12rem" }} className="m-3">
+    <Card
+      id="picturesForm"
+      style={{ width: "18rem", minWidth: "12rem" }}
+      className="m-3"
+    >
       <Card.Img className="card-img-top" variant="top" src={src} />
       <Card.Body className="w-100">
         <Container className="d-flex justify-content-between">
@@ -37,8 +44,11 @@ const UserImageCard = ({ index, src, onImageUpdate, onImageRemove }) => {
 
 const PicturesForm = ({ defaultValue }) => {
   const images = useImage(defaultValue);
+  const [spinner, setSpinner] = useState(false);
+
   const saveImages = async () => {
-    const picFormResponse = await pictureFormService(images.value);
+    setSpinner(true);
+    await pictureFormService(images.value);
     const infoFilledResponse = await InfoFilledTokenService();
     if (infoFilledResponse) {
       window.localStorage.removeItem("LoggedMatchaUser");
@@ -49,6 +59,7 @@ const PicturesForm = ({ defaultValue }) => {
       window.location.reload();
     }
   };
+
   return (
     <>
       <Container className="signup-container mb-3 mt-3 w-75 mb-5">
@@ -86,19 +97,27 @@ const PicturesForm = ({ defaultValue }) => {
                 >
                   Click or Drop here
                 </Button>
-                <p className="text-muted mt-2">maximum five pictures</p>
+                <p className="text-muted mt-2">
+                  maximum five pictures
+                  <br />
+                  maximum size 3MB
+                </p>
               </div>
             </div>
           )}
         </ImageUploading>
-        <Button
-          disabled={images.value.length ? false : true}
-          onClick={saveImages}
-          className="landing-signup-Button"
-          variant="dark"
-        >
-          Save
-        </Button>
+        <Container className="d-flex align-items-center gap-3">
+          <Button
+            disabled={images.value.length ? false : true}
+            onClick={saveImages}
+            className="landing-signup-Button"
+            variant="dark"
+          >
+            Save
+          </Button>
+
+          {spinner && <Spinner animation="grow" />}
+        </Container>
       </Container>
     </>
   );

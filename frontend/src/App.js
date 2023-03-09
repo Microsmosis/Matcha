@@ -11,30 +11,27 @@ import Navigation from "./components/Navigation";
 import UserInfoForms from "./components/userInfoForms/UserInfoForms";
 import Terms from "./components/footer/Terms";
 import About from "./components/footer/About";
-import useJWT from "./utils/decryptToken";
+import History from "./components/History";
 import Settings from "./components/settings/Settings";
 import Profile from "./components/Profile";
+import {isJsonString, useJWT} from "./utils/tokenTools";
 
 // This is needed for generating random users, DONT UNCOMMENT
 // import { getRandomUsers } from "./services/usersServices";
-/* import Search from "./components/Search";
-import { fetchUserSearch } from "./reducers/searchReducer";
-import { getRandomUsers } from "./services/usersServices"; */
-import ChatScreen from "./components/chat/ChatScreen";
-
+import Chat from "./components/chat/Chat";
+import { Container } from "react-bootstrap";
 
 const App = () => {
   const dispatch = useDispatch();
   const [loggedUser, setLoggedUser] = useState("");
   const [token, setToken] = useState("");
-  const { decodedToken, isExpired } = useJWT(token);
+  const { decodedToken, isExpired } = useJWT(token); // eslint-disable-line
 
   // This function to add random users, BECAREFUL this will add plenty of users
-  // getRandomUsers();
-
+  //  getRandomUsers();
   useEffect(() => {
     const loggedUserJson = window.localStorage.getItem("LoggedMatchaUser");
-    if (loggedUserJson) {
+    if (isJsonString(loggedUserJson) && loggedUserJson !== null) {
       const userToken = JSON.parse(loggedUserJson);
       setToken(userToken.token);
     } else {
@@ -49,7 +46,8 @@ const App = () => {
       ];
       if (
         !paths.includes(url) &&
-        !window.location.href.includes("/api/verify/code=")
+        !window.location.href.includes("/api/verify/code=") &&
+        !window.location.href.includes("/api/forgotpassword/code=")
       ) {
         window.location.assign("/");
       }
@@ -66,66 +64,82 @@ const App = () => {
         dispatch(tokenLoginCall(decodedToken, token));
       }
     }
-  }, [loggedUser, decodedToken, token]);
+  }, [loggedUser, decodedToken, token]); // eslint-disable-line
 
   if (!loggedUser) {
     return (
-      <div className="App">
-        <Routes>
-          <Route path="/" element={<LandingPage />} />
-          <Route
-            path="/*"
-            element={<Credentials setLoggedUser={setLoggedUser} />}
-          />
-          <Route path="/terms" element={<Terms />} />
-          <Route path="/about" element={<About />} />
-        </Routes>
+      <>
+        <Container className="min-vh-100 blobs-background" fluid>
+          <Routes>
+            <Route path="/" element={<LandingPage />} />
+            <Route
+              path="/*"
+              element={<Credentials setLoggedUser={setLoggedUser} />}
+            />
+            <Route path="/terms" element={<Terms />} />
+            <Route path="/about" element={<About />} />
+          </Routes>
+        </Container>
         <AppFooter />
-      </div>
+      </>
     );
   } else {
+    setInterval(() => {
+      const validToken = window.localStorage.getItem("LoggedMatchaUser");
+      if (!validToken) {
+        setTimeout(() => {
+          const localToken = window.localStorage.getItem("LoggedMatchaUser");
+          if (!localToken) {
+            window.location.assign("/");
+          }
+        }, 2000);
+      }
+    }, 2000);
     return (
-      <div className="App">
-        <Routes>
-          <Route
-            path="/"
-            element={loggedUser ? <Navigate to="/home" /> : <LandingPage />}
-          />
-          <Route
-            path="/*"
-            element={
-              loggedUser ? (
-                <Navigate to="/home" />
-              ) : (
-                <Credentials setLoggedUser={setLoggedUser} />
-              )
-            }
-          />
-          <Route
-            path="/"
-            element={
-              <Navigation
-                loggedUser={loggedUser}
-                setLoggedUser={setLoggedUser}
+      <>
+        <Container className="min-vh-100" fluid>
+          <Routes>
+            <Route
+              path="/"
+              element={loggedUser ? <Navigate to="/home" /> : <LandingPage />}
+            />
+            <Route
+              path="/*"
+              element={
+                loggedUser ? (
+                  <Navigate to="/home" />
+                ) : (
+                  <Credentials setLoggedUser={setLoggedUser} />
+                )
+              }
+            />
+            <Route
+              path="/"
+              element={
+                <Navigation
+                  loggedUser={loggedUser}
+                  setLoggedUser={setLoggedUser}
+                />
+              }
+            >
+              <Route
+                path="/home"
+                element={loggedUser.infoFilled ? <Home /> : <UserInfoForms />}
               />
-            }
-          >
-            <Route
-              path="/home"
-              element={loggedUser.infoFilled ? <Home /> : <UserInfoForms />}
-            />
-            <Route path="/profile" element={<Profile />} />
-            <Route
-              path="/settings"
-              element={<Settings setLoggedUser={setLoggedUser} />}
-            />
-          </Route>
-          <Route path="/terms" element={<Terms />} />
-          <Route path="/about" element={<About />} />
-		  <Route path="/chat-screen" element={<ChatScreen />} />
-        </Routes>
+              <Route path="/profile" element={<Profile />} />
+              <Route path="/history" element={<History />} />
+              <Route
+                path="/settings"
+                element={<Settings setLoggedUser={setLoggedUser} />}
+              />
+              <Route path="/chat/:id" element={<Chat />} />
+            </Route>
+            <Route path="/terms" element={<Terms />} />
+            <Route path="/about" element={<About />} />
+          </Routes>
+        </Container>
         <AppFooter />
-      </div>
+      </>
     );
   }
 };

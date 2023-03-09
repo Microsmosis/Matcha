@@ -1,6 +1,6 @@
 import axios from "axios";
-
 const userUrl = "http://localhost:5000/api/user";
+
 let token;
 
 export const setServiceToken = (userToken) => {
@@ -106,7 +106,62 @@ export const userNewDataService = async (newData) => {
   return response.data;
 };
 
-/* export const getUserService = async (userData) => {
-	const response = await axios.post(`${userUrl}/user-info`, userData);
-	return response.data;
-} */
+export const fetchConnections = async (userId) => {
+  const response = await axios.get(`${userUrl}/user-connections/${userId}`);
+  return response.data;
+};
+
+export const getNotificationsService = async (userId) => {
+  const response = await axios.get(`${userUrl}/get-notifications/${userId}`);
+  return response.data;
+};
+
+export const getMostRecentNotificationService = async (data) => {
+  const response = await axios.get(
+    `${userUrl}/get-recent-notification/${data.room}/${data.time}`
+  );
+  return response.data;
+};
+
+export const insertNotificationService = async (notification) => {
+  const config = {
+    headers: { Authorization: token },
+  };
+  const response = await axios.post(
+    `${userUrl}/insert-notifications`,
+    notification,
+    config
+  );
+  return response.data;
+};
+
+export const clearNotificationsService = async () => {
+  const config = {
+    headers: { Authorization: token },
+  };
+  const response = await axios.delete(`${userUrl}/clear-notifications`, config);
+  return response.data;
+};
+
+export const seenNotificationsService = async () => {
+  const config = {
+    headers: { Authorization: token },
+  };
+  const response = await axios.delete(`${userUrl}/seen-notifications`, config);
+  return response.data;
+};
+
+export const deleteUserAccount = async (userId) => {
+  try {
+    const response = await axios.delete(`${userUrl}/delete-user/${userId}`);
+    if (response.data === "user-deleted") {
+      window.localStorage.removeItem("LoggedMatchaUser");
+      window.location.assign("/");
+    }
+
+    return true;
+  } catch (error) {
+    console.error(error.message);
+    return error.message;
+  }
+};

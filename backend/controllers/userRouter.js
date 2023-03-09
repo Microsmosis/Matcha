@@ -6,6 +6,7 @@ const Mailer = require("../utils/mailer");
 const mailsFormat = require("../utils/mailsFormat");
 const jwt = require("jsonwebtoken");
 const tokenTools = require("../utils/tokenTools");
+const getConnections = require("../utils/getConnections");
 
 userRouter.post("/", async (request, response) => {
   const body = request.body;
@@ -25,29 +26,35 @@ userRouter.post("/", async (request, response) => {
   }
 });
 
-// when user submits as request for a password reset, they are added to a "forgotten" table and sent an email
 userRouter.post("/forgotpassword", async (request, response) => {
   const body = request.body;
-  const verificationCode = await queryTools.insertForgottenPassword(body.email);
-  if (verificationCode.length === 50) {
-    const htmlMail = mailsFormat.verificationMail(
-      body.fullname,
-      verificationCode
+
+  const fullNameQuery = await infoQueries.selectByEmail(body.email);
+  try {
+    const verificationCode = await queryTools.insertForgottenPassword(
+      body.email
     );
-    const emailResp = Mailer(
-      body.email,
-      "Change forgotten password for Matcha",
-      htmlMail
-    );
-    return response.status(200);
-  } else {
+    if (verificationCode.length === 50) {
+      const htmlMail = mailsFormat.forgotPasswordMail(
+        fullNameQuery[0].fullname,
+        verificationCode
+      );
+      const emailResp = Mailer(
+        body.email,
+        "Change forgotten password for Matcha",
+        htmlMail
+      );
+      return response.status(200).send(true);
+    } else {
+      return response.status(200).send(false);
+    }
+  } catch (error) {
     return response.status(401).json({
       error: "email sending error",
     });
   }
 });
 
-// to insert the new password to the database and remove person from "forgotten" table
 userRouter.post("/resetpassword", async (request, response) => {
   const { code, password } = request.body;
 
@@ -75,30 +82,35 @@ userRouter.post("/verify", async (request, response) => {
 
 userRouter.post("/login", async (request, response) => {
   const body = request.body;
-  const loggedUser = await queries.loginUser(body);
-  if (loggedUser) {
-    let infoFilled;
-    const userPictures = await queryTools.selectOneQualifier(
-      "pictures",
-      "user_id",
-      loggedUser.user_id
-    );
-    userPictures.rows.length ? (infoFilled = true) : (infoFilled = false);
+  try {
+    const loggedUser = await queries.loginUser(body);
+    if (loggedUser) {
+      let infoFilled;
+      const userPictures = await queryTools.selectOneQualifier(
+        "pictures",
+        "user_id",
+        loggedUser.user_id
+      );
+      userPictures.rows.length ? (infoFilled = true) : (infoFilled = false);
 
-    const userForToken = {
-      username: loggedUser.username,
-      id: loggedUser.user_id,
-      infoFilled: infoFilled,
-      name: loggedUser.fullname,
-    };
+      const userForToken = {
+        username: loggedUser.username,
+        id: loggedUser.user_id,
+        infoFilled: infoFilled,
+        name: loggedUser.fullname,
+      };
 
-    const token = jwt.sign(userForToken, process.env.SECRET);
-    return response.status(200).send({
-      token,
-    });
-  } else {
+      const token = jwt.sign(userForToken, process.env.SECRET);
+      return response.status(200).send({
+        token,
+      });
+    } else {
+      return response.status(200).send(false);
+    }
+  } catch (error) {
+    console.error(error.message);
     return response.status(401).json({
-      error: "invalid username or password",
+      error: "error login",
     });
   }
 });
@@ -116,14 +128,6 @@ userRouter.post("/login/tk", async (request, response) => {
     });
   }
 });
-
-// const getToken = (request) => {
-//   const auth = request.get("authorization");
-//   if (auth && auth.toLowerCase().startsWith("bearer")) {
-//     return auth.substring(7);
-//   }
-//   return null;
-// };
 
 userRouter.post("/info", async (request, response) => {
   const ip = request.ip;
@@ -174,19 +178,8 @@ userRouter.post("/pictures", async (request, response) => {
   }
 });
 
-// const verifyToken = (request) => {
-//   const userToken = getToken(request);
-//   const decodedToken = jwt.verify(userToken, process.env.SECRET);
-//   if (!decodedToken.id) {
-//     return false;
-//   }
-//   return decodedToken;
-// };
-
 userRouter.post("/infoFilledToken", async (request, response) => {
   const decodedToken = tokenTools.verifyToken(request);
-  // const oldToken = getToken(request);
-  // const decodedToken = jwt.verify(oldToken, process.env.SECRET);
   if (!decodedToken) {
     return response.status(401).json({ error: "new token generating error" });
   }
@@ -216,7 +209,6 @@ userRouter.get("/pictures/:id", async (request, response) => {
   }
 });
 
-// used to get usernames and email from both tables users and user_verify
 userRouter.post("/verify-username-email", async (request, response) => {
   const body = request.body;
   let info;
@@ -264,7 +256,7 @@ userRouter.post("/change-email", async (request, response) => {
     const verificationCode = await queryTools.emailChangeRequest(body);
     if (verificationCode.length === 50) {
       const emailResp = Mailer(
-        body.oldEmail,
+        body.email,
         "Verification to change Matcha users E-mail",
         `Please click on the following link to verify email: http://localhost:3000/api/verify-email/code=${verificationCode}`
       );
@@ -298,7 +290,6 @@ userRouter.post("/edit-user-data", async (request, response) => {
       error: "token error",
     });
   }
-  console.log("decoded token id: ", decodedToken.id);
   switch (body.infoType) {
     case "bio":
       queryResponse = await queryTools.updateOneQualifier(
@@ -327,14 +318,6 @@ userRouter.post("/edit-user-data", async (request, response) => {
       break;
   }
 
-  // const queryResponse = await queryTools.updateOneQualifier(
-  //   "users",
-  //   "bio",
-  //   body.newBio,
-  //   "user_id",
-  //   decodedToken.id
-  // );
-
   if (queryResponse.length) {
     response.status(200).send(queryResponse);
   } else {
@@ -344,17 +327,224 @@ userRouter.post("/edit-user-data", async (request, response) => {
   }
 });
 
-/* userRouter.post("/user-info", async (request, response) => {
-	const body = request.body;
-	const user_id = body.user_id;
-	try {
-		const userInfo = await queryTools.selectOneQualifier("users", "user_id", user_id);
-		return response.status(200).send(userInfo);
-	} catch (error) {
-		return response.status(404).json({
-			error: "user was not found or bad request"
-		});
-	}
-}); */
+userRouter.get("/user-connections/:id", async (request, response) => {
+  const id = request.params.id;
+  try {
+    const queryResponse = await queryTools.selectColOneQualifier(
+      "connected",
+      "connections",
+      "user_id",
+      id
+    );
+    if (queryResponse.length) {
+      if (queryResponse[0].connections) {
+        if (queryResponse[0].connections.length) {
+          const users = await getConnections(queryResponse[0].connections);
+          if (users.length) {
+            response.status(200).send(users);
+          } else {
+            response.status(401).json({
+              error: "users id error in fetching connections",
+            });
+          }
+        } else {
+          if (queryResponse[0].connections.length === 0) {
+            response.status(200).send([]);
+          } else {
+            response.status(401).json({
+              error: "connections query error",
+            });
+          }
+        }
+      } else {
+        response.status(200).send([]);
+      }
+    } else {
+      response.status(200).send([]);
+    }
+  } catch (error) {
+    response.status(401).json({
+      error: error.message,
+    });
+  }
+});
+
+userRouter.post("/user-status", async (request, response) => {
+  const body = request.body;
+
+  if (body) {
+    const obj = JSON.parse(body);
+    let queryResponse;
+    if (obj.userId) {
+      const userStatus = await queryTools.selectColOneQualifier(
+        "users",
+        "status",
+        "user_id",
+        obj.userId
+      );
+      switch (obj.status) {
+        case "online":
+          if (userStatus.status !== "online") {
+            queryResponse = await queryTools.updateOneQualifier(
+              "users",
+              "status",
+              "online",
+              "user_id",
+              obj.userId
+            );
+          }
+          response.status(200).send("online");
+          break;
+        case "offline":
+          if (userStatus.status !== "offline") {
+            queryResponse = await infoQueries.setUserOffline(obj.userId);
+          }
+          response.status(200).send("offline");
+          break;
+      }
+    } else {
+      response.status(200).send("cant find user status");
+    }
+  } else {
+    response.status(200).send("cant find user status");
+  }
+});
+
+userRouter.delete("/delete-user/:id", async (request, response) => {
+  const sentId = request.params.id;
+  try {
+    const deletePictures = await queryTools.deleteOneQualifier(
+      "pictures",
+      "user_id",
+      sentId
+    );
+    const deleteConnections = await queryTools.deleteOneQualifier(
+      "connected",
+      "user_id",
+      sentId
+    );
+
+    const deleteUser = await queryTools.deleteOneQualifier(
+      "users",
+      "user_id",
+      sentId
+    );
+
+    const removeUserFromConnectionsColumns =
+      await infoQueries.removeFromConnections(sentId);
+
+    response.status(200).send("user-deleted");
+  } catch (error) {
+    response.status(401).json({
+      "delete-user-error": error.message,
+    });
+  }
+});
+
+userRouter.get("/get-notifications/:id", async (request, response) => {
+  const id = request.params.id;
+  try {
+    const queryResponse = await queryTools.selectOneQualifier(
+      "notifications",
+      "user_id",
+      id
+    );
+    if (queryResponse.rows.length) {
+      response.status(200).send(queryResponse.rows);
+    } else {
+      response.status(200).send([]);
+    }
+  } catch (error) {
+    response.status(404).json({
+      "error from get notification": error.message,
+    });
+  }
+});
+
+userRouter.get(
+  "/get-recent-notification/:id/:time",
+  async (request, response) => {
+    const id = request.params.id;
+    const time = request.params.time;
+    try {
+      const queryResponse = await queryTools.selectOneQualifier(
+        "notifications",
+        "user_id",
+        id
+      );
+      if (queryResponse.rows.length) {
+        const recentNotification = queryResponse.rows.filter((n) => {
+          return n.notifications.time === time;
+        });
+        if (recentNotification) {
+          response.status(200).send(recentNotification);
+        }
+      } else {
+        response.status(200).send([]);
+      }
+    } catch (error) {
+      response.status(404).json({
+        "error from get notification": error.message,
+      });
+    }
+  }
+);
+
+userRouter.post("/insert-notifications", async (request, response) => {
+  const body = request.body;
+  try {
+    const queryResponse = await queryTools.insertNotifications(body);
+    response.status(200).send(queryResponse);
+  } catch (error) {
+    response.status(401).json({
+      "error from post notification": error.message,
+    });
+  }
+});
+
+userRouter.delete("/clear-notifications", async (request, response) => {
+  const decodedToken = tokenTools.verifyToken(request);
+  if (!decodedToken) {
+    response.status(401).json({
+      error: "token error",
+    });
+  }
+  try {
+    const queryResponse = await queryTools.deleteOneQualifier(
+      "notifications",
+      "user_id",
+      decodedToken.id
+    );
+    response.status(200).send(queryResponse);
+  } catch (error) {
+    response.status(401).json({
+      "error from delete notifications": error.message,
+    });
+  }
+});
+
+userRouter.delete("/seen-notifications", async (request, response) => {
+  const decodedToken = tokenTools.verifyToken(request);
+  if (!decodedToken) {
+    response.status(401).json({
+      error: "token error",
+    });
+  }
+
+  try {
+    const queryResponse = await queryTools.updateOneQualifier(
+      "notifications",
+      "status",
+      "seen",
+      "user_id",
+      decodedToken.id
+    );
+    response.status(200).send(queryResponse);
+  } catch (error) {
+    response.status(401).json({
+      "error from seen notifications": error.message,
+    });
+  }
+});
 
 module.exports = userRouter;

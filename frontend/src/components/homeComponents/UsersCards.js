@@ -2,196 +2,209 @@ import {
   Card,
   Col,
   Row,
-  Image,
-  Carousel,
   Button,
-  Collapse,
   Container,
   Fade,
+  Image,
 } from "react-bootstrap";
-// import pic from "../../media/cp2.jpg";
-
 import locationIcon from "../../media/location-icon.png";
+import { updateUsersStatus } from "../../reducers/usersReducer";
 import { Spinner } from "react-bootstrap";
 import { useEffect, useState } from "react";
-
-import { viewUserService, getDistanceService } from "../../services/usersServices";
-import { sendNotificationService } from "../../services/notificationServices";
+import UsersImagesCarousel from "./UsersImagesCarousel";
+import FadeIn from "react-fade-in";
+import {
+  viewUserService,
+  getDistanceService,
+} from "../../services/usersServices";
 import BlockButton from "./BlockButton";
 import LikeButton from "./LikeButton";
 import ReportAccount from "./ReportAccount";
 import { getUsersImages } from "../../services/usersServices";
-const maleImages = require.context("../../media/male", true);
-const femaleImages = require.context("../../media/female", true);
+import UserCardInfo from "./UserCardInfo";
+import onlineIcon from "../../media/online.png";
+import sendNotification from "../../utils/sendNotification";
+import { useDispatch } from "react-redux";
+import convertTZ from "../../utils/ConvertTZ";
 
-// const test = require("../../media/female/f1.jpg");
 
-const UsersCards = ({ user, /* profilePictures,  */ loggedUserId, loggedUsername, loggedUserCoords }) => {
+const UsersCards = ({
+  user,
+  loggedUserId,
+  loggedUsername,
+  loggedUserCoords,
+}) => {
   const [open, setOpen] = useState(false);
   const [hide, setHide] = useState(true);
   const [userImages, setUserImages] = useState([]);
   const [fameRate, setFameRate] = useState(0);
-  const [distance, setDistance] = useState("")
+  const [distance, setDistance] = useState("");
+  const [fadeBody, setFadeBody] = useState({ visible: "" });
+  const [loading, setLoading] = useState(true);
+  const dispatch = useDispatch();
 
-  const displayUserInfo = () => {
-	  if (!open) {
-		  const userIds = { viewedUser: user.user_id, loggedUser: loggedUserId };
-		  viewUserService(userIds);
-		  sendNotificationService(user.email, loggedUsername, 2);
-		  getDistanceService(loggedUserCoords, user.coordinates).then((resp) => {
-			setDistance(resp);
-		  })
+  useEffect(() => {
+    if (open){
+      dispatch(updateUsersStatus(user.user_id))
     }
+  }, [open]) // eslint-disable-line
+
+  const [displayEffect, setDisplayEffect] = useState({
+    picCol: 12,
+    bodyDisplay: "d-none",
+    cardClass: "w-50 overflow-hidden",
+    bottomRow: "mb-5 mt-3",
+    status: "d-none",
+  });
+  const last_logged_time = user.last_logged_time.split("T");
+  const time = last_logged_time[1].split(".");
+  const convertedDate = convertTZ(`${last_logged_time[0]} ${time[0]} +${time[1]}`, "Europe/Helsinki") 
+  const fullTime = `${convertedDate.getHours()}:${convertedDate.getMinutes()}`
+  const displayUserInfo = () => {
+    if (!open) {
+      const userIds = { viewedUser: user.user_id, loggedUser: loggedUserId };
+      viewUserService(userIds);
+
+      getDistanceService(loggedUserCoords, user.coordinates).then((resp) => {
+        if (resp < 1 && resp > 0) {
+          setDistance(parseInt(resp * 1000) + " m");
+        } else {
+          setDistance(resp + " km");
+        }
+      });
+      setDisplayEffect({
+        picCol: 4,
+        bodyDisplay: "",
+        cardClass: "w-100 overflow-hidden",
+        bottomRow: "d-none",
+        status: "d-flex align-items-center gap-2 mt-3",
+      });
+      setFadeBody({ transitionDuration: "2000" });
+      sendNotification(
+        user.user_id,
+        loggedUsername,
+        "Your profile was viewed by"
+      );
+    } else {
+      setFadeBody({ visible: "" });
+      setTimeout(() => {
+        setDisplayEffect({
+          picCol: 12,
+          bodyDisplay: "d-none",
+          cardClass: "w-50 overflow-hidden",
+          bottomRow: "mb-5 mt-3",
+          status: "d-none",
+        });
+      }, [450]);
+    }
+
     setOpen(!open);
     setHide(!hide);
   };
 
   useEffect(() => {
     getUsersImages(user.user_id).then((resp) => setUserImages(resp));
-  }, []);
+  }, []); // eslint-disable-line
+
+  useEffect(() => {
+    if (userImages.length) {
+      setTimeout(() => setLoading(false), 1000);
+    }
+  }, [userImages]);
 
   if (!userImages.length) {
-    return <Spinner animation="grow" />;
+    return (
+      <Col className="g-3 d-flex justify-content-center">
+        <Spinner animation="grow" />
+      </Col>
+    );
   } else {
     return (
-      <Col className="g-3">
-        <Card className="w-auto">
-          <Row>
-            <Col key={user.user_id * 3}>
-              <Carousel
-                controls={false}
-                pause="hover"
-                className="carousel-cards"
-              >
-                {userImages.map((image) => {
-                  let img;
-                  if (image.picture.includes("./")) {
-                    switch (user.gender) {
-                      case "female":
-                        img = femaleImages(image.picture);
-                        break;
-                      case "male":
-                        img = maleImages(image.picture);
-                        break;
-                      default:
-                    }
-                  } else {
-                    img = image.picture;
-                  }
-                  return (
-                    <Carousel.Item key={image.id}>
-                      <Card.Img src={img} />
-                      <Fade in={hide}>
-                        <Card.ImgOverlay>
-                          <Container className="card-overlay-text p-1 rounded">
-                            <Card.Title className="text-white fs-1">
-                              {user.fullname}
-                            </Card.Title>
-                          </Container>
-                        </Card.ImgOverlay>
-                      </Fade>
-                    </Carousel.Item>
-                  );
-                })}
-                {/* <Carousel.Item>
-                  <Card.Img src={pic} />
-                  <Fade in={hide}>
-                    <Card.ImgOverlay>
-                      <Container className="card-overlay-text p-1 rounded">
-                        <Card.Title className="text-white fs-1">
-                          {user.fullname}
-                        </Card.Title>
+      <Col className="g-3 d-flex justify-content-center">
+        {loading ? (
+          <Spinner animation="grow" />
+        ) : (
+          <Card
+            className={displayEffect.cardClass}
+            style={{ minWidth: "23rem" }}
+          >
+            <Row className="no-gutters w-auto">
+              <Col md={displayEffect.picCol}>
+                <UsersImagesCarousel
+                  userImages={userImages}
+                  userGender={user.gender}
+                />
+                <Container className={displayEffect.status}>
+                  {user.status === "online" ? (
+                    <>
+                      <Container className="px-0 mx-0 cards-icons">
+                        <Image src={onlineIcon} fluid />
                       </Container>
-                    </Card.ImgOverlay>
-                  </Fade>
-                </Carousel.Item> */}
-              </Carousel>
-              <Button
-                onClick={displayUserInfo}
-                aria-controls="example-collapse-text"
-                className="users-cards-btn"
-              >
-                Check me out
-              </Button>
-            </Col>
-            <Collapse in={open} dimension="width">
-              <Col key={user.user_id * 4} md={7} id="example-collapse-text">
-                <Card.Body className="cards-body h-100">
-                  <div>
-                    <Card.Title className="mb-3">
-                      <strong className="fs-1">{user.fullname}</strong>
-                      <span className="text-muted fs-3 m-3">{user.age}</span>
-                    </Card.Title>
-                    <div className="d-flex align-items-center mb-3">
-                      <div
-                        className="opacity-75 cards-icons"
-                        style={{ marginRight: "10px" }}
-                      >
-                        <Image src={locationIcon} fluid></Image>
-                      </div>
-                      <Card.Text className="text-muted fs-4">
-                        Lives in {user.city}
-                      </Card.Text>
-					  <Card.Text className="text-muted fs-4">
-                        Distance {distance} km away from you.
-                      </Card.Text>
-                    </div>
-                    <Card.Text className="mb-4">
-                      <strong className="fs-3">About me</strong>
-                      <br />
-                      <span className="fs-6 text-muted">
-                        Lorem ipsum dolor sit amet, consectetur adipiscing elit,
-                        sed do eiusmod tempor incididunt ut labore et dolore
-                        magna aliqua. Ut enim ad minim veniam, quis nostrud
-                        exercitation ullamco laboris nisi ut aliquip ex ea
-                        commodo consequat. Duis aute irure dolor in
-                        reprehenderit in voluptate velit esse cillum dolore eu
-                        fugiat nulla pariatur. Excepteur sint occaecat cupidatat
-                        non proident, sunt in culpa qui officia deserunt mollit
-                        anim id est laborum.
-                        <br />
-                        <span className="fs-6">@{user.username}</span>
+                      <span className="fs-6 text-muted">Online</span>
+                    </>
+                  ) : (
+                    <>
+                      <span className="fs-7 text-muted">
+                        Last login time: {last_logged_time[0]} {fullTime}
                       </span>
-                    </Card.Text>
-                    <hr />
-                    <Card.Text>
-                      <strong className="fs-3">Interests</strong>
-                    </Card.Text>
-                    <Card.Text className="mb-4">
-                      <span className="d-flex">
-                        {user.tags.map((tag) => (
-                          <span key={tag} className="cards-tags text-muted">
-                            {tag}
-                          </span>
-                        ))}
-                      </span>
-                    </Card.Text>
-                    <hr />
-                    <Card.Text>
-                      <strong className="fs-3">Fame Rate</strong>
-                      <br />
-                      <span className="text-muted fs-4">{fameRate}</span>
-                    </Card.Text>
-                  </div>
+                    </>
+                  )}
+                </Container>
+              </Col>
 
-                  <div className="cards-buttons w-100">
-                    <BlockButton loggedUserId={loggedUserId} user={user} />
-
-                    <LikeButton
-                      loggedUserId={loggedUserId}
-                      user={user}
-                      fameRate={fameRate}
-                      setFameRate={setFameRate}
-					  loggedUsername={loggedUsername}
-                    />
-                  </div>
-
-                  <ReportAccount loggedUserId={loggedUserId} user={user} />
+              <Col md={8} className={displayEffect.bodyDisplay}>
+                <Card.Body className="h-100">
+                  <FadeIn {...fadeBody}>
+                    <UserCardInfo user={user} distance={distance} />
+                    <Container className="d-flex justify-content-center gap-5 mt-5">
+                      <BlockButton loggedUserId={loggedUserId} user={user} />
+                      <LikeButton
+                        loggedUserId={loggedUserId}
+                        user={user}
+                        fameRate={fameRate}
+                        setFameRate={setFameRate}
+                        loggedUsername={loggedUsername}
+                      />
+                    </Container>
+                    <ReportAccount loggedUserId={loggedUserId} user={user} />
+                  </FadeIn>
                 </Card.Body>
               </Col>
-            </Collapse>
-          </Row>
-        </Card>
+            </Row>
+
+            <Row>
+              <Col className="p-3 mx-3">
+                <Container className={displayEffect.bottomRow}>
+                  <Fade in={hide}>
+                    <Card.Title className="fs-1">
+                      <strong>{user.fullname}</strong>
+                      <span className="mx-3 fs-3 text-muted">{user.age}</span>
+                    </Card.Title>
+                  </Fade>
+                  <Fade in={hide}>
+                    <Container className="d-flex align-items-center gap-2 px-0">
+                      <span className="opacity-75 cards-icons">
+                        <Image src={locationIcon} fluid />
+                      </span>
+                      <Card.Text className="text-muted fs-5">
+                        Lives in {user.city}
+                      </Card.Text>
+                    </Container>
+                  </Fade>
+                </Container>
+                <Container className={displayEffect.bottomButton}>
+                  <Button
+                    variant="outline-dark"
+                    onClick={displayUserInfo}
+                    aria-expanded={open}
+                  >
+                    Check me out
+                  </Button>
+                </Container>
+              </Col>
+            </Row>
+          </Card>
+        )}
       </Col>
     );
   }

@@ -1,11 +1,13 @@
 import UseField from "../UseField";
 import { useState } from "react";
-import { Form, Container, Button, Alert } from "react-bootstrap";
+import { Form, Container, Button } from "react-bootstrap";
 import { Link, useNavigate } from "react-router-dom";
 import logo from "../../media/logo-black.png";
 import { checkUserName, checkPassword } from "../../utils/InputChecks";
 import { useDispatch } from "react-redux";
 import { logUser } from "../../reducers/loginReducer";
+import AlertInput from "../../utils/AlertInput";
+import ScrollTop from "../../utils/scrollTop"
 
 const Login = ({ setLoggedUser }) => {
   const username = UseField("text", "");
@@ -14,10 +16,11 @@ const Login = ({ setLoggedUser }) => {
   const navigate = useNavigate();
   const [loginCheck, setLoginCheck] = useState(true);
 
+  ScrollTop('login')
   const handleLogin = (e) => {
     e.preventDefault();
     const userInfo = {
-      username: username.value,
+      username: username.value.toLowerCase(),
       password: password.value,
     };
     dispatch(logUser(userInfo)).then((resp) => {
@@ -34,10 +37,12 @@ const Login = ({ setLoggedUser }) => {
     password.onChange(e);
   };
   return (
-    <Container className="signup-container mt-5">
+    <Container id='login' className="mb-3 shadow rounded p-sm-4 col-sm-6">
       <Form onSubmit={handleLogin}>
         <Form.Group className="mb-3 form-logo">
-          <img className="form-logo-img" alt="" src={logo} />
+          <Link to="/">
+            <img className="form-logo-img" alt="" src={logo} />
+          </Link>
         </Form.Group>
         <Form.Group className="mb-3">
           <Form.Label>Username</Form.Label>
@@ -52,9 +57,10 @@ const Login = ({ setLoggedUser }) => {
           <></>
         ) : (
           <Form.Group className="mb-3">
-            <Alert variant="danger" className="error-alert">
-              Log in credentials incorrect, please try again.
-            </Alert>
+            <AlertInput
+              variant="danger"
+              text="Incorrect username or password"
+            />
           </Form.Group>
         )}
         <Button
@@ -74,9 +80,11 @@ const Login = ({ setLoggedUser }) => {
         <Link to="/forgot-password">Forgot password?</Link>
       </div>
       <hr />
-      <p>
-        Don't have an account? <Link to="/signup">Sign Up</Link>
-      </p>
+      <Container className="p-1">
+        <p>
+          Don't have an account? <Link to="/signup">Sign Up</Link>
+        </p>
+      </Container>
     </Container>
   );
 };

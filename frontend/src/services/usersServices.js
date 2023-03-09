@@ -7,6 +7,13 @@ export const getUsersImages = async (user_id) => {
   return response.data;
 };
 
+export const getUserProfileImage = async (user_id) => {
+  const response = await axios.get(
+    `${usersUrl}/user-profile-picture/${user_id}`
+  );
+  return response.data;
+};
+
 export const getUsersService = async (user, country) => {
   const userObj = {
     gender: user.gender,
@@ -19,11 +26,6 @@ export const getUsersService = async (user, country) => {
 
 export const getUsersByCountryService = async (data) => {
   const response = await axios.post(`${usersUrl}/country`, data);
-  return response.data;
-};
-
-export const getUsersProfileImage = async () => {
-  const response = await axios.get(`${usersUrl}/profileimage`);
   return response.data;
 };
 
@@ -53,21 +55,55 @@ export const reportUserService = async (usersId) => {
 };
 
 export const getRandomUsers = async () => {
-  const response = await axios.get("https://randomuser.me/api/?results=25");
+  const response = await axios.get("https://randomuser.me/api/?results=30");
   if (response.data) {
-    const savedinDbResponse = await axios.post(
+    const savedinDbResponse = await axios.post( // eslint-disable-line
       `${usersUrl}/random-users`,
       response.data
-    );
+    ); 
   }
   return response.data;
 };
 
 export const getDistanceService = async (start, end) => {
-	const coords = {
-		start: start,
-		end: end
-	}
-	const response = await axios.post(`${usersUrl}/distance`, coords);
-	return response.data;
+  const coords = {
+    start: start,
+    end: end,
+  };
+  const response = await axios.post(`${usersUrl}/distance`, coords);
+  return response.data;
+};
+
+export const getUserById = async (userId) => {
+  const response = await axios.get(`${usersUrl}/user-id/${userId}`);
+  return response.data;
+};
+
+export const chatService = async (matchedObj) => {
+  const response = await axios.post(`${usersUrl}/chatrooms`, matchedObj);
+  return response.data;
+};
+
+export const saveChatMessagesService = async (messages) => {
+  const response = await axios.post(
+    `${usersUrl}/insert-chat-messages`,
+    messages
+  );
+  return response.data;
+};
+
+export const getChatMessagesService = async (roomData) => {
+  const response = await axios.post(`${usersUrl}/get-chat-messages`, roomData);
+  return response.data;
+};
+
+export const clearChat = async (userId1, userId2) => {
+  const ids = { userId1, userId2 };
+  const response = await axios.post(`${usersUrl}/clear-chat`, ids);
+  return response.data;
+};
+
+export const checkUsersService = async (userId) => {
+  const response = await axios.get(`${usersUrl}/check-users/${userId}`);
+  return response.data;
 }

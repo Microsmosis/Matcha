@@ -11,7 +11,7 @@ const distanceTool = require("../utils/distanceTool");
 usersRouter.post("/all", async (request, response) => {
   const body = request.body;
   const queryResponse = await queryTools.selectAllWithFilter(body);
-  response.status(200).send(queryResponse); // have to this because if nothing is found in db it throws a bunch of errors
+  response.status(200).send(queryResponse);
 });
 
 usersRouter.post("/country", async (request, response) => {
@@ -41,7 +41,6 @@ usersRouter.get("/profileimage", async (request, response) => {
   }
 });
 
-// working on this
 usersRouter.get("/user-pictures/:id", async (request, response) => {
   const userId = request.params.id;
   const queryResponse = await queryTools.selectOneQualifier(
@@ -66,21 +65,20 @@ usersRouter.post("/likeuser", async (request, response) => {
     likedUserId,
     likedById
   );
-
-  if(queryResponseLiked.length) {
+  if (queryResponseLiked.length) {
     const queryResponseLikedBy = await usersQueries.updateArrayQuery(
       "users",
       "liked_by",
       likedById,
       likedUserId
     );
-	if(queryResponseLikedBy.length) {
-		const queryResponseConnected = await usersQueries.updateConnectedQuery(
-			likedById,
-    		likedUserId
-		);
-	}
-    if(queryResponseLikedBy.length) {
+    if (queryResponseLikedBy.length) {
+      const queryResponseConnected = await usersQueries.updateConnectedQuery(
+        likedById,
+        likedUserId
+      );
+    }
+    if (queryResponseLikedBy.length) {
       response.status(200).send(queryResponseLikedBy);
     }
   } else {
@@ -132,10 +130,11 @@ usersRouter.post("/viewedUser", async (request, response) => {
         error: "inserting view error",
       });
     }
+  } else {
+    response.status(200).send({ message: "user viewed" });
   }
 });
 
-// working on this now
 usersRouter.post("/blockuser", async (request, response) => {
   const { loggedUser, blockedUser } = request.body;
 
@@ -182,8 +181,6 @@ usersRouter.post("/report-user", async (request, response) => {
     reportedUser
   );
 
-  // There should be rule if reports are 3 for example,
-  // the account should be deleted and an email sent to the user.
   if (insertReportQuery.length) {
     if (insertReportQuery[0].reports_by.length >= 3) {
       const htmlMail = mailsFormat.reportMail(insertReportQuery[0].fullname);
@@ -234,6 +231,7 @@ usersRouter.post("/random-users", async (request, response) => {
     let male = 1;
     let female = 1;
     let img;
+    let img2;
     for (let index = 0; index < results.length; index++) {
       if (i > 2) {
         i = 0;
@@ -250,10 +248,12 @@ usersRouter.post("/random-users", async (request, response) => {
       switch (results[index].gender) {
         case "male":
           img = `./m${male}.jpg`;
+          img2 = `./m${male}-2.jpg`;
           male++;
           break;
         case "female":
           img = `./f${female}.jpg`;
+          img2 = `./f${female}-2.jpg`;
           female++;
           break;
       }
@@ -286,6 +286,10 @@ usersRouter.post("/random-users", async (request, response) => {
         img,
         queryResponse.rows[0].user_id
       );
+      const picturesQueryResponse2 = await usersQueries.insertUserPictures(
+        img2,
+        queryResponse.rows[0].user_id
+      );
       i++;
       x++;
     }
@@ -293,15 +297,124 @@ usersRouter.post("/random-users", async (request, response) => {
 });
 
 usersRouter.post("/distance", async (request, response) => {
-	const body = request.body;
-	const distanceResponse = distanceTool(body);
-	if (distanceResponse.length) {
-	  response.status(200).send(distanceResponse);
-	} else {
-	  response.status(404).json({
-		error: "distance not possible to calculate",
-	  });
-	}
-  });
+  const body = request.body;
+  const distanceResponse = distanceTool(body);
+  if (distanceResponse.length) {
+    response.status(200).send(distanceResponse);
+  } else {
+    response.status(404).json({
+      error: "distance not possible to calculate",
+    });
+  }
+});
+
+usersRouter.get("/user-id/:id", async (request, response) => {
+  const id = parseInt(request.params.id);
+  const queryResponse = await queryTools.selectOneQualifier(
+    "users",
+    "user_id",
+    id
+  );
+  if (queryResponse.rows) {
+    response.status(200).send(queryResponse.rows);
+  } else {
+    response.status(404).json({
+      error: "user not found",
+    });
+  }
+});
+
+usersRouter.post("/chatrooms", async (request, response) => {
+  const body = request.body;
+  const params1 = [body.user_id, body.match_user_id];
+  const params2 = [body.match_user_id, body.user_id];
+  const queryResponse = await queryTools.selectChats(params1, params2);
+  if (queryResponse.length === 0) {
+    const insertResponse = await queryTools.insertChat(params1);
+    if (insertResponse.length) {
+      response.status(200).send(insertResponse[0]);
+    } else {
+      response.status(404).json({
+        error: "was not able to insert new chatroom",
+      });
+    }
+  } else {
+    response.status(200).send(queryResponse[0]);
+  }
+});
+
+usersRouter.post("/insert-chat-messages", async (request, response) => {
+  const body = request.body;
+  const queryResponse = await queryTools.saveChatMessage(body);
+  if (queryResponse.length) {
+    response.status(200).send(queryResponse[0]);
+  } else {
+    response.status(404).json({
+      error: "error occured when inserting new messages",
+    });
+  }
+});
+
+usersRouter.post("/get-chat-messages", async (request, response) => {
+  const body = request.body;
+  const queryResponse = await queryTools.getChatMessages(body);
+  if (queryResponse.length) {
+    response.status(200).send(queryResponse[0]);
+  } else {
+    response.status(404).json({
+      error: "error occured when fetching old messages",
+    });
+  }
+});
+
+usersRouter.post("/clear-chat", async (request, response) => {
+  const ids = request.body;
+  try {
+    const queryResponse = await usersQueries.clearChat(ids);
+    response.status(200).send(queryResponse);
+  } catch (error) {
+    console.error(error.message);
+    response.status(401).json({
+      error: error.message,
+    });
+  }
+});
+
+usersRouter.get("/user-profile-picture/:id", async (request, response) => {
+  const id = request.params.id;
+
+  try {
+    const queryResponse = await queryTools.selectLimitOneQualifier(
+      "pictures",
+      "user_id",
+      id
+    );
+    response.status(200).send(queryResponse[0]);
+  } catch (error) {
+    console.error("error in fetching profile picture: ", error.message);
+    response.status(404).json({
+      error: "user profile picture error",
+    });
+  }
+});
+
+usersRouter.get("/check-users/:id", async (request, response) => {
+  const userId = request.params.id
+  try {
+    if (userId){
+      const queryResponse = await queryTools.selectOneQualifier('users', 'user_id', userId)
+      if (queryResponse.rows.length){
+        response.status(200).send(true)
+      } else {
+        response.status(200).send(false)
+      }
+    }
+  } catch (error) {
+    console.error("error in checking store users")
+    response.status(404).json({
+      error: error.message,
+    });
+  }
+})
 
 module.exports = usersRouter;

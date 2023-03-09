@@ -3,17 +3,26 @@ import {
   USER_LIKE_SUCCESS,
   USER_DISLIKE_SUCCESS,
   USER_REPORT_SUCCESS,
+  USERS_STATUS_UPDATED,
   DELETE_REPORTED_USER,
+  USER_BLOCK_SUCCESS,
+  USER_UNMATCHED_SUCCESS,
   USERS_REDUCER_ERROR,
 } from "../actions/types";
 
 import {
-  getUsersService,
   likeUserService,
   dislikeUserService,
   reportUserService,
   getUsersByCountryService,
+  getUserById,
+  blockUserService,
+  clearChat,
+  checkUsersService,
 } from "../services/usersServices";
+
+import { getConnections } from "./connectionsReducer";
+import sendNotification from "../utils/sendNotification";
 
 const initialState = {
   users: [],
@@ -73,6 +82,45 @@ const usersReducer = (state = initialState, action) => {
         users: state.users.filter((user) => user.user_id !== payload),
         error: null,
       };
+
+    case USERS_STATUS_UPDATED:
+      return {
+        ...state,
+        users: state.users.map((user) => {
+          if (user.user_id === payload[0].user_id) {
+            return {
+              ...user,
+              status: payload[0].status,
+              last_logged_time: payload[0].last_logged_time,
+            };
+          }
+          return user;
+        }),
+        error: null,
+      };
+
+    case USER_UNMATCHED_SUCCESS:
+      return {
+        ...state,
+        users: state.users.map((user) => {
+          if (user.user_id === payload.unMatchedUserId) {
+            return {
+              ...user,
+              liked_by: user.liked_by.filter(
+                (ids) => ids !== payload.loggedUserId
+              ),
+            };
+          }
+          return user;
+        }),
+      };
+    case USER_BLOCK_SUCCESS:
+      return {
+        ...state,
+        users: state.users.filter((user) => user.user_id !== payload),
+        error: null,
+      };
+
     case USERS_REDUCER_ERROR:
       return {
         ...state,
@@ -84,30 +132,16 @@ const usersReducer = (state = initialState, action) => {
   }
 };
 
-const usersFetchSuccess = (users) => {
+export const usersFetchSuccess = (users) => {
   return {
     type: USERS_FETCHED_SUCCESS,
     payload: users,
   };
 };
 
-const likeUserSuccess = (updatedUser) => {
+const updateStoreUser = (updatedUser, type) => {
   return {
-    type: USER_LIKE_SUCCESS,
-    payload: updatedUser,
-  };
-};
-
-const disLikeUserSuccess = (updatedUser) => {
-  return {
-    type: USER_DISLIKE_SUCCESS,
-    payload: updatedUser,
-  };
-};
-
-const reportUserSuccess = (updatedUser) => {
-  return {
-    type: USER_REPORT_SUCCESS,
+    type,
     payload: updatedUser,
   };
 };
@@ -126,23 +160,6 @@ const usersReducerError = (error) => {
   };
 };
 
-export const fetchUsers = (user, country) => {
-  return async (dispatch) => {
-    try {
-      const response = await getUsersService(user, country);
-      const filteredUsersArr = response.filter(
-        (elem) => elem.user_id !== user.user_id
-      );
-      dispatch(usersFetchSuccess(filteredUsersArr));
-      return filteredUsersArr;
-    } catch (error) {
-      dispatch(usersReducerError(error.message));
-      console.error(error.message);
-      return error.message;
-    }
-  };
-};
-
 export const getUsersByCountry = (country, user) => {
   return async (dispatch) => {
     try {
@@ -158,14 +175,43 @@ export const getUsersByCountry = (country, user) => {
   };
 };
 
-export const likeUser = (likedUserId, likedById) => {
+export const likeUser = (
+  likedUserId,
+  likedById,
+  likerUsername,
+  likedUsername
+) => {
   return async (dispatch) => {
     try {
       const usersIds = { likedUserId, likedById };
       const updatedUser = await likeUserService(usersIds);
-
-      dispatch(likeUserSuccess(updatedUser));
-
+      if (
+        updatedUser[0].liked === null ||
+        updatedUser[0].liked.includes(likedById) !==
+          updatedUser[0].liked_by.includes(likedById)
+      ) {
+        sendNotification(
+          likedUserId,
+          likerUsername,
+          "Your profile was liked by"
+        );
+      } else if (
+        updatedUser[0].liked.includes(likedById) ===
+        updatedUser[0].liked_by.includes(likedById)
+      ) {
+        sendNotification(
+          likedUserId,
+          likerUsername,
+          "Your profile is matched and you are now able to chat with"
+        );
+        sendNotification(
+          likedById,
+          likedUsername,
+          "Your profile is matched and you are now able to chat with"
+        );
+        dispatch(getConnections());
+      }
+      dispatch(updateStoreUser(updatedUser, USER_LIKE_SUCCESS));
       return updatedUser;
     } catch (error) {
       dispatch(usersReducerError(error.message));
@@ -175,12 +221,26 @@ export const likeUser = (likedUserId, likedById) => {
   };
 };
 
-export const disLikeUser = (likedUserId, likedById) => {
+export const disLikeUser = (likedUserId, likedById, disLikerUsername) => {
   return async (dispatch) => {
     try {
       const usersIds = { likedUserId, likedById };
       const updatedUser = await dislikeUserService(usersIds);
-      dispatch(disLikeUserSuccess(updatedUser));
+      if (
+        updatedUser[0].liked !== null &&
+        updatedUser[0].liked.includes(likedById) &&
+        !updatedUser[0].liked_by.includes(likedById)
+      ) {
+        sendNotification(
+          likedUserId,
+          disLikerUsername,
+          "You are unmatched with"
+        );
+        dispatch(getConnections());
+
+        await clearChat(likedUserId, likedById);
+      }
+      dispatch(updateStoreUser(updatedUser, USER_DISLIKE_SUCCESS));
 
       return updatedUser;
     } catch (error) {
@@ -198,12 +258,76 @@ export const reportUser = (loggedUserId, reportedUser) => {
       const serviceResponse = await reportUserService(usersId);
 
       if (serviceResponse.length) {
-        dispatch(reportUserSuccess(serviceResponse));
+        dispatch(updateStoreUser(serviceResponse, USER_REPORT_SUCCESS));
       } else {
         dispatch(deleteReportedUser(reportedUser));
       }
 
       return true;
+    } catch (error) {
+      console.error(error.message);
+      dispatch(usersReducerError(error.message));
+      return false;
+    }
+  };
+};
+
+export const updateUsersStatus = (userId) => {
+  return async (dispatch) => {
+    try {
+      const updatedUser = await getUserById(userId);
+      if (updatedUser.length) {
+        dispatch(updateStoreUser(updatedUser, USERS_STATUS_UPDATED));
+      }
+      return true;
+    } catch (error) {
+      console.error(error.message);
+      dispatch(usersReducerError(error.message));
+      return false;
+    }
+  };
+};
+
+export const blockUser = (loggedUser, blockedUser) => {
+  return async (dispatch) => {
+    try {
+      const usersIds = { loggedUser, blockedUser };
+      const response = await blockUserService(usersIds);
+      if (response) {
+        dispatch(updateStoreUser(usersIds.blockedUser, USER_BLOCK_SUCCESS));
+      }
+      return true;
+    } catch (error) {
+      console.error(error.message);
+      dispatch(usersReducerError(error.message));
+      return false;
+    }
+  };
+};
+
+export const checkUsers = (users) => {
+  return async (dispatch) => {
+    try {
+      const ids = users.map((user) => user.user_id);
+      for (let index = 0; index < ids.length; index++) {
+        const response = await checkUsersService(ids[index]);
+        if (!response){
+          dispatch(deleteReportedUser(ids[index]))
+        }
+      }
+    } catch (error) {
+      console.error(error.message);
+      dispatch(usersReducerError(error.message));
+      return false;
+    }
+  };
+};
+
+export const updateUnmatchedUsers = (loggedUserId, unMatchedUserId) => {
+  return async (dispatch) => {
+    try {
+      const updatedIds = { loggedUserId, unMatchedUserId };
+      dispatch(updateStoreUser(updatedIds, USER_UNMATCHED_SUCCESS));
     } catch (error) {
       console.error(error.message);
       dispatch(usersReducerError(error.message));

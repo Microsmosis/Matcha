@@ -1,36 +1,41 @@
-import { Container, Row } from "react-bootstrap";
+import { Container, Row, Image } from "react-bootstrap";
 import UsersCards from "./homeComponents/UsersCards";
 import HomeNavBar from "./homeComponents/homeNavBar";
 import { useDispatch } from "react-redux";
 import { useEffect, useState } from "react";
-import { fetchUsers, getUsersByCountry } from "../reducers/usersReducer";
+import { getUsersByCountry } from "../reducers/usersReducer";
 import LoadingScreen from "./LoadingScreen";
-import { getUsersProfileImage } from "../services/usersServices";
 import { useStoreUser, useStoreUsers } from "../utils/getStoreStates";
 import sortUsers from "../utils/sortUsers";
+import searchIcon from "../media/search-empty.png";
+import ScrollToTop from "react-scroll-to-top";
+import UseField from "./UseField";
 
 const Home = () => {
   const dispatch = useDispatch();
   const { user } = useStoreUser();
   const usersInStore = useStoreUsers();
   const [users, setUsers] = useState([]);
-  // const [profilePictures, setProfilePictures] = useState([]);
   const [sort, setSort] = useState(false);
   const [order, setOrder] = useState("ascending");
+  const [originalUsers, setOriginalUsers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const searchName = UseField("text", "");
 
   useEffect(() => {
     if (user) {
       dispatch(getUsersByCountry(user.country, user)).then((resp) => {
         setUsers(resp);
+        setOriginalUsers(resp);
       });
     }
   }, [dispatch, user]);
 
   useEffect(() => {
-    if (sort) {
-      setUsers(sortUsers(users, sort, order));
+    if (usersInStore.users) {
+      setTimeout(() => setLoading(false), 2000);
     }
-  }, [sort, order]);
+  }, [user, usersInStore.users]);
 
   useEffect(() => {
     if (usersInStore.users) {
@@ -42,12 +47,34 @@ const Home = () => {
     }
   }, [usersInStore.users]);
 
-  if (!users || !user) {
+  useEffect(() => {
+    if (sort) {
+      if (usersInStore.users) {
+        if (usersInStore.users.length) {
+          setUsers(sortUsers(usersInStore.users, sort, order));
+        }
+      }
+    }
+  }, [sort, order, usersInStore.users]);
+
+  useEffect(() => {
+    if (searchName.value.length) {
+      if (usersInStore.users.length) {
+        const searchedUsers = usersInStore.users.filter((user) =>
+          user.username.includes(searchName.value.toLowerCase())
+        );
+        setUsers(searchedUsers);
+      }
+    } else {
+      if (usersInStore.users.length) {
+        setUsers(usersInStore.users);
+      }
+    }
+  }, [searchName.value, usersInStore]);
+
+  if (!users || !user || loading) {
     return <LoadingScreen />;
-  } else if (users === 'no users found' /* && profilePictures === 'no pictures' */){
-	  return (<><h1>no users found</h1></>)
-  } 
-  else {
+  } else {
     return (
       <>
         <Container>
@@ -55,25 +82,37 @@ const Home = () => {
             setSort={setSort}
             setOrder={setOrder}
             setUsers={setUsers}
-            users={users}
+            originalUsers={originalUsers}
+            searchName={searchName}
           />
-          <Container className="d-flex">
-            <Container className="users-cards-wrapper">
+        </Container>
+        <Container>
+          {users.length ? (
+            <Container>
               {users.map((userToDisplay) => (
-                <div key={userToDisplay.user_id}>
-                  <Row className="mb-5">
-                    <UsersCards
-                      user={userToDisplay}
-/*                    profilePictures={profilePictures} */
-                      loggedUserId={user.user_id}
-					  loggedUsername={user.username}
-					  loggedUserCoords={user.coordinates}
-                    />
-                  </Row>
-                </div>
+                <Row key={userToDisplay.user_id} className="mb-5">
+                  <UsersCards
+                    user={userToDisplay}
+                    loggedUserId={user.user_id}
+                    loggedUsername={user.username}
+                    loggedUserCoords={user.coordinates}
+                  />
+                </Row>
               ))}
             </Container>
-          </Container>
+          ) : (
+            <Container className="text-center mt-5">
+              <Container className="w-25">
+                <Image src={searchIcon} fluid />
+              </Container>
+              <strong className="fs-1">
+                No users found
+                <br />
+                Try to change the settings in advanced search
+              </strong>
+            </Container>
+          )}
+          <ScrollToTop smooth />
         </Container>
       </>
     );

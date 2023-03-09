@@ -16,8 +16,8 @@ const insertUserInfo = async (
 
   const locationArr = location.split(", ");
 
-  if(coords[0] === 0 && coords[1] === 0)
-	coords = await getCoords(locationArr[0]);
+  if (coords[0] === 0 && coords[1] === 0)
+    coords = await getCoords(locationArr[0]);
 
   try {
     const queryResponse = await pool.query(
@@ -88,29 +88,30 @@ const disLikeUserQuery = async (disLikedUserId, disLikedById) => {
       "UPDATE users SET liked_by = array_remove(liked_by, $1) WHERE user_id = $2 RETURNING *",
       [disLikedById, disLikedUserId]
     );
-	const test = await pool.query(
-		"UPDATE users SET liked = array_remove(liked, $1) WHERE user_id = $2 RETURNING *",
-		[disLikedUserId, disLikedById]
-	);
+    const test = await pool.query(
+      "UPDATE users SET liked = array_remove(liked, $1) WHERE user_id = $2 RETURNING *",
+      [disLikedUserId, disLikedById]
+    );
 
-	const deleteConnection = await pool.query(
-		"SELECT connections FROM connected WHERE user_id = $1",
-		[disLikedById]
-	);
+    const deleteConnection = await pool.query(
+      "SELECT connections FROM connected WHERE user_id = $1",
+      [disLikedById]
+    );
 
-	if(deleteConnection.rows[0].connections !== null) { // gives error in console on null value
-		const bool = deleteConnection.rows[0].connections.includes(disLikedUserId)
-		if(bool === true) {
-			const dislikedDisconnect = await pool.query(
-				"UPDATE connected SET connections = array_remove(connections, $1) WHERE user_id = $2",
-				[disLikedUserId, disLikedById]
-			);
-			const dislikerDisconnect = await pool.query(
-				"UPDATE connected SET connections = array_remove(connections, $1) WHERE user_id = $2",
-				[disLikedById, disLikedUserId]
-			);
-		}
-	}
+    if (deleteConnection.rows[0].connections !== null) {
+      const bool =
+        deleteConnection.rows[0].connections.includes(disLikedUserId);
+      if (bool === true) {
+        const dislikedDisconnect = await pool.query(
+          "UPDATE connected SET connections = array_remove(connections, $1) WHERE user_id = $2",
+          [disLikedUserId, disLikedById]
+        );
+        const dislikerDisconnect = await pool.query(
+          "UPDATE connected SET connections = array_remove(connections, $1) WHERE user_id = $2",
+          [disLikedById, disLikedUserId]
+        );
+      }
+    }
 
     return queryResponse;
   } catch (error) {
@@ -159,32 +160,55 @@ const updateUserSearchQuery = async (user_id, searchData) => {
   }
 };
 
-const insertSettings = async ({username, fullname, newPW, user_id, location, coords}) => {
-	if(newPW.length === 0) {
-		const queryResponse = await pool.query(
-			"SELECT password FROM users WHERE user_id = $1",
-			[user_id]
-		)
-		newPW = queryResponse.rows[0].password;
-	} else {
-		newPW = await bcrypt.hash(newPW, 10);
-	}
-	const locationArr = location.split(", ");
+const insertSettings = async ({
+  username,
+  fullname,
+  newPW,
+  user_id,
+  location,
+  coords,
+  gender,
+  sexualPreference,
+}) => {
+  if (newPW.length === 0) {
+    const queryResponse = await pool.query(
+      "SELECT password FROM users WHERE user_id = $1",
+      [user_id]
+    );
+    newPW = queryResponse.rows[0].password;
+  } else {
+    newPW = await bcrypt.hash(newPW, 10);
+  }
+  const locationArr = location.split(", ");
 
-	if(coords[0] === 0 && coords[1] === 0)
-		coords = await getCoords(locationArr[0]);
+  if (coords[0] === 0 && coords[1] === 0)
+    coords = await getCoords(locationArr[0]);
 
-	try {
-	const queryResponse = await pool.query(
-		"UPDATE users SET username = $1, fullname = $2, password = $3, city = $4, country = $5, coordinates = $6 WHERE user_id = $7",
-		[username, fullname, newPW, locationArr[0], locationArr[1], coords, user_id]
-	);
-	return queryResponse.rows;
-	} catch (error) {
-		console.error(error.message);
-		return false;
-	}
-}
+  try {
+    const queryResponse = await pool.query(
+      "UPDATE users SET username = $1, fullname = $2, password = $3, city = $4, country = $5, coordinates = $6, gender = $7, sexuality = $8 WHERE user_id = $9",
+      [
+        username,
+        fullname,
+        newPW,
+        locationArr[0],
+        locationArr[1],
+        coords,
+        gender,
+        sexualPreference,
+        user_id,
+      ]
+    );
+    const modUsernameConnected = await pool.query(
+      "UPDATE connected SET username = $1 WHERE user_id = $2",
+      [username, user_id]
+    );
+    return queryResponse.rows;
+  } catch (error) {
+    console.error(error.message);
+    return false;
+  }
+};
 
 const getPassword = async ({ pw, id }) => {
   try {
@@ -245,29 +269,90 @@ const updateUsersOneQualifier = async (col, colToUp, newData, qualifier) => {
 };
 
 const updateConnectedQuery = async (likedById, likedUserId) => {
-	try {
-		const checkLikes = await pool.query(
-			"SELECT liked FROM users WHERE user_id = $1",
-			[likedUserId]
-		);
-		if(checkLikes.rows[0].liked !== null) { // gives error in console on null value
-			const bool = checkLikes.rows[0].liked.includes(likedById)
-			if(bool === true) {
-				updateLiker = await pool.query(
-					"UPDATE connected SET connections = array_append(connections, $1) WHERE user_id = $2",
-					[likedUserId, likedById]
-				);
-				updateLiked = await pool.query(
-					"UPDATE connected SET connections = array_append(connections, $1) WHERE user_id = $2",
-					[likedById, likedUserId]
-				);
-			}
-		}
-		return checkLikes.rows;
-	  } catch (error) {
-		console.error(error.message);
-		return error.message;
-	  }
+  try {
+    const checkLikes = await pool.query(
+      "SELECT liked FROM users WHERE user_id = $1",
+      [likedUserId]
+    );
+    if (checkLikes.rows[0].liked !== null) {
+      const bool = checkLikes.rows[0].liked.includes(likedById);
+      if (bool === true) {
+        updateLiker = await pool.query(
+          "UPDATE connected SET connections = array_append(connections, $1) WHERE user_id = $2",
+          [likedUserId, likedById]
+        );
+        updateLiked = await pool.query(
+          "UPDATE connected SET connections = array_append(connections, $1) WHERE user_id = $2",
+          [likedById, likedUserId]
+        );
+      }
+    }
+    return checkLikes.rows;
+  } catch (error) {
+    console.error(error.message);
+    return error.message;
+  }
+};
+
+const removeFromConnections = async (userToRemove) => {
+  try {
+    const allConnections = await pool.query("SELECT * FROM connected");
+
+    const filteredConnections = allConnections.rows.filter((c) => {
+      if (c.connections.includes(Number(userToRemove)) === true) {
+        return c;
+      }
+    });
+
+    filteredConnections.map(async (fC) => {
+      let removeUser = await pool.query(
+        "UPDATE connected SET connections = array_remove(connections, $1) WHERE user_id = $2",
+        [userToRemove, fC.user_id]
+      );
+    });
+  } catch (error) {
+    console.error(error.message);
+    return error.message;
+  }
+};
+
+const setUserOffline = async (userId) => {
+  try {
+    const queryResponse = await pool.query(
+      `UPDATE users SET last_logged_time = NOW(), status = 'offline' WHERE user_id = ${userId} RETURNING *`
+    );
+    return queryResponse.rows;
+  } catch (error) {
+    console.error(error.message);
+    return error.message;
+  }
+};
+
+const clearChat = async (usersId) => {
+  let sequanceA = `${usersId.userId1}-${usersId.userId2}`;
+  let sequanceB = `${usersId.userId2}-${usersId.userId1}`;
+  try {
+    const queryResponse = await pool.query(
+      `DELETE FROM chats WHERE room_name = '${sequanceA}' OR room_name = '${sequanceB}' RETURNING *`
+    );
+    return queryResponse.rows;
+  } catch (error) {
+    console.error(error.message);
+    return error.message;
+  }
+};
+
+const selectByEmail = async (email) => {
+  try {
+    const queryResponse = await pool.query(
+      "SELECT fullname FROM users WHERE email = $1",
+      [email]
+    );
+    return queryResponse.rows;
+  } catch (error) {
+    console.error(error.message);
+    return error.message;
+  }
 };
 
 module.exports = {
@@ -282,5 +367,9 @@ module.exports = {
   checkColArrayValue,
   updateArrayQuery,
   updateUsersOneQualifier,
-  updateConnectedQuery
+  updateConnectedQuery,
+  removeFromConnections,
+  setUserOffline,
+  clearChat,
+  selectByEmail,
 };

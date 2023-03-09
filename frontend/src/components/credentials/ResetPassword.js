@@ -1,16 +1,18 @@
 import UseField from "../UseField";
-// import logo from "../../media/logo-black.png";
 import logo from "../../media/logo-black.png";
-import { useParams } from "react-router-dom";
+import { useParams, Link } from "react-router-dom";
 import { checkPassword } from "../../utils/InputChecks";
 import { resetPassWordService } from "../../services/userServices";
-import { Form, Button, Container, Alert } from "react-bootstrap";
+import { Form, Button, Container } from "react-bootstrap";
+import AlertInput from "../../utils/AlertInput";
+import ScrollTop from "../../utils/scrollTop";
 
 const ResetPassword = () => {
   const password = UseField("text", "");
   const param = useParams().code;
   const code = { code: param.substring(param.indexOf("=") + 1, param.length) };
 
+  ScrollTop("resetPass");
   const handleSubmit = (e) => {
     e.preventDefault();
 
@@ -21,12 +23,15 @@ const ResetPassword = () => {
     resetPassWordService(info);
     e.target.value = "";
     password.onChange(e);
+    window.location.assign("/login");
   };
 
   return (
-    <Container className="signup-container">
+    <Container id="resetPass" className="signup-container">
       <Form.Group className="mb-3 form-logo">
-        <img className="form-logo-img" alt="" src={logo} />
+        <Link to="/">
+          <img className="form-logo-img" alt="" src={logo} />
+        </Link>
       </Form.Group>
       <Form onSubmit={handleSubmit}>
         <Form.Group className="mb-3">
@@ -39,9 +44,7 @@ const ResetPassword = () => {
           {checkPassword(password.value) || password.value.length === 0 ? (
             <></>
           ) : (
-            <Alert variant="danger" className="error-alert mt-3">
-              <strong>Password</strong> invalid!
-            </Alert>
+            <AlertInput variant="danger" text="invalid password!" />
           )}
         </Form.Group>
         <Button type="submit">Submit</Button>

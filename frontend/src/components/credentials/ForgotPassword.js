@@ -4,15 +4,18 @@ import {
   getCredentials,
   forgotPassWordService,
 } from "../../services/userServices";
-import { Form, Button, Container, Alert } from "react-bootstrap";
+import { Form, Button, Container } from "react-bootstrap";
 import logo from "../../media/logo-black.png";
 import { Link } from "react-router-dom";
 import { checkEmail } from "../../utils/InputChecks";
+import AlertInput from "../../utils/AlertInput";
+import ScrollTop from "../../utils/scrollTop";
 
 const ForgotPassword = () => {
   const email = UseField("email", "");
   const [emailVerify, setEmailVerify] = useState(true);
 
+  ScrollTop("forgotPass");
   useEffect(() => {
     getCredentials({ type: "email" }).then((res) => {
       let obj = res.find((o) => o.email === email.value);
@@ -38,10 +41,12 @@ const ForgotPassword = () => {
   };
 
   return (
-    <Container className="signup-container mt-5">
+    <Container id="forgotPass" className="mb-3 shadow rounded p-sm-4 col-sm-6">
       <Form onSubmit={handleSubmit}>
         <Form.Group className="mb-3 form-logo">
-          <img className="form-logo-img" alt="" src={logo} />
+          <Link to="/">
+            <img className="form-logo-img" alt="" src={logo} />
+          </Link>
         </Form.Group>
         <Form.Group className="mb-3">
           <div className="mb-3">
@@ -55,9 +60,7 @@ const ForgotPassword = () => {
         {emailVerify === false || email.value.length === 0 ? (
           <></>
         ) : (
-          <Alert variant="danger">
-            This <strong>email</strong> does not exist, please try again.
-          </Alert>
+          <AlertInput variant="danger" text="This email does not exist" />
         )}
         <Button
           disabled={checkEmail(email.value) ? false : true}
@@ -69,11 +72,11 @@ const ForgotPassword = () => {
         </Button>
       </Form>
       <hr />
-      <div className="text-center">
+      <Container className="p-1">
         <p>
           Back To Login? <Link to="/login">Log In</Link>
         </p>
-      </div>
+      </Container>
     </Container>
   );
 };

@@ -24,6 +24,30 @@ const selectOneQualifier = async (table, column, qualifier) => {
   }
 };
 
+const selectLimitOneQualifier = async (table, column, qualifier) => {
+  try {
+    const queryResponse = await pool.query(
+      `SELECT * FROM ${table} WHERE ${column} = ${qualifier} LIMIT 1`
+    );
+    return queryResponse.rows;
+  } catch (error) {
+    console.error(error.message);
+    return false;
+  }
+};
+
+const selectColOneQualifier = async (table, selectedCol, col, qualifier) => {
+  try {
+    const queryResponse = await pool.query(
+      `SELECT ${selectedCol} FROM ${table} WHERE ${col} = ${qualifier}`
+    );
+    return queryResponse.rows;
+  } catch (error) {
+    console.error(error.message);
+    return false;
+  }
+};
+
 const selectAllWithFilter = async (user) => {
   let queryResponse;
   try {
@@ -195,7 +219,7 @@ const changeEmail = async (verificationCode) => {
       );
       return updateEmail;
     } else {
-      return false; // this might give an error in console if the verification code does not exist ..
+      return false; 
     }
   } catch (error) {
     console.error(error.message);
@@ -216,10 +240,89 @@ const setSearchDefault = async (user_id) => {
   }
 };
 
+const selectChats = async (params1, params2) => {
+  try {
+    const queryResponse = await pool.query(
+      "SELECT * FROM chats WHERE users = $1 OR users = $2", // maybe like here
+      [params1, params2]
+    );
+    return queryResponse.rows;
+  } catch (error) {
+    console.error(error.message);
+    return error.message;
+  }
+};
+
+const insertChat = async (params) => {
+  const roomName = `${params[0]}-${params[1]}`;
+  try {
+    const queryResponse = await pool.query(
+      `INSERT INTO chats(users, room_name) VALUES($1, '${roomName}') RETURNING *`,
+      [params]
+    );
+    return queryResponse.rows;
+  } catch (error) {
+    console.error(error.message);
+    return error.message;
+  }
+};
+
+const saveChatMessage = async (data) => {
+  try {
+    const queryResponse = await pool.query(
+      `UPDATE chats SET messages = $1 WHERE room_name = '${data[0].room}' RETURNING *`,
+      [{ data }]
+    );
+    return queryResponse.rows;
+  } catch (error) {
+    console.error(error.message);
+    return error.message;
+  }
+};
+
+const getChatMessages = async (room) => {
+  try {
+    const queryResponse = await pool.query(
+      `SELECT messages FROM chats WHERE room_name = '${room.room}'`
+    );
+    return queryResponse.rows;
+  } catch (error) {
+    console.error(error.message);
+    return error.message;
+  }
+};
+
+const getNotifications = async (room) => {
+  try {
+    const queryResponse = await pool.query(
+      "SELECT notifications FROM notifications WHERE user_id = $1",
+      [room.room]
+    );
+    return queryResponse.rows;
+  } catch (error) {
+    console.error(error.message);
+    return error.message;
+  }
+};
+
+const insertNotifications = async (notification) => {
+  try {
+    const queryResponse = await pool.query(
+      "INSERT INTO notifications(user_id, notifications) VALUES($1, $2) RETURNING *",
+      [notification.room, notification]
+    );
+    return queryResponse.rows;
+  } catch (error) {
+    console.error(error.message);
+    return error.message;
+  }
+};
+
 module.exports = {
   selectAllTable,
   selectOneQualifier,
   selectAllWithFilter,
+  selectLimitOneQualifier,
   unionOneQualifier,
   deleteOneQualifier,
   insertForgottenPassword,
@@ -228,4 +331,11 @@ module.exports = {
   changeEmail,
   setSearchDefault,
   updateOneQualifier,
+  selectColOneQualifier,
+  selectChats,
+  insertChat,
+  saveChatMessage,
+  getChatMessages,
+  getNotifications,
+  insertNotifications,
 };

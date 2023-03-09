@@ -13,7 +13,7 @@ import ProfileImagesCarousel from "./profileComponents/ProfileImagesCarousel";
 const Profile = () => {
   const { user } = useStoreUser();
   const [userPictures, setUserPictures] = useState([]);
-
+  let i = 0;
   useEffect(() => {
     if (user) {
       getUsersImages(user.user_id).then((resp) => {
@@ -22,16 +22,20 @@ const Profile = () => {
     }
   }, [user]);
   if (!user || !userPictures.length) {
-    return <LoadingScreen />;
+    return (
+      <Container>
+        <LoadingScreen />
+      </Container>
+    );
   } else {
     return (
-      <Container className="mt-5">
+      <Container className="p-sm-3 p-0">
         <h1>@{user.username}</h1>
         <hr />
-        <Card className="mb-3 mx-auto w-100">
+        <Card className="mb-3 mx-auto w-100 shadow">
           <Row className="no-gutters mb-3 ">
             <Col md={4}>
-              <ProfileImagesCarousel userPictures={userPictures} />
+              <ProfileImagesCarousel userGender={user.gender} userPictures={userPictures} />
             </Col>
             <Col md={8}>
               <Card.Body>
@@ -62,11 +66,14 @@ const Profile = () => {
                 </Card.Title>
                 <Card.Text className="mb-4">
                   <span className="d-flex">
-                    {user.tags.map((tag) => (
-                      <span key={tag} className="cards-tags text-muted">
-                        {tag}
-                      </span>
-                    ))}
+                    {user.tags.map((tag) => {
+                      i++;
+                      return (
+                        <span key={tag + i} className="cards-tags text-muted">
+                          {tag}
+                        </span>
+                      );
+                    })}
                   </span>
                 </Card.Text>
                 <EditTags userTags={user.tags} />
